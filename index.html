@@ -5,8 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vòng Quay May Mắn</title>
-    <link rel="icon" href="/imges/logo_Favicon.png">
+    <link rel="icon" href="./imges/logo_Favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap');
 
@@ -31,7 +32,7 @@
 
 <body class="bg-gradient-to-br from-orange-100 to-amber-200">
     <div id="app" class="min-h-screen flex flex-col justify-center items-center p-4">
-        <img src="/imges/logoCGnew.png" alt="Logo" class="w-35 h-20 mb-4">
+        <img src="./imges/logoCGnew.png" alt="Logo" class="w-35 h-20 mb-4">
         <h1 class="text-4xl md:text-5xl font-extrabold text-center text-amber-800 mb-4 shadow-text">
             Vòng Quay May Mắn
         </h1>
@@ -41,7 +42,9 @@
         <div class="relative w-80 h-80 md:w-96 md:h-96 flex justify-center items-center">
             <div class="absolute -top-4 w-16 h-16 z-10 pointer" style="left: 50%; transform: translateX(-50%);">
                 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M32 0C36.4183 0 40 3.58172 40 8V24C40 28.4183 36.4183 32 32 32C27.5817 32 24 28.4183 24 24V8C24 3.58172 27.5817 0 32 0Z" fill="#E63946" />
+                    <path
+                        d="M32 0C36.4183 0 40 3.58172 40 8V24C40 28.4183 36.4183 32 32 32C27.5817 32 24 28.4183 24 24V8C24 3.58172 27.5817 0 32 0Z"
+                        fill="#E63946" />
                     <path d="M32 64L16 32H48L32 64Z" fill="#E63946" />
                     <circle cx="32" cy="32" r="8" fill="white" />
                     <circle cx="32" cy="32" r="4" fill="#E63946" />
@@ -52,20 +55,24 @@
             </div>
         </div>
 
-        <button id="spinButton" class="mt-10 py-4 px-12 text-2xl font-bold text-white rounded-full shadow-xl transform transition-all duration-300 bg-gradient-to-r from-red-500 to-orange-500 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100">
+        <button id="spinButton"
+            class="mt-10 py-4 px-12 text-2xl font-bold text-white rounded-full shadow-xl transform transition-all duration-300 bg-gradient-to-r from-red-500 to-orange-500 hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100">
             QUAY
         </button>
     </div>
 
     <!-- Modal -->
-    <div id="prizeModal" class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-transform duration-300 scale-95">
+    <div id="prizeModal"
+        class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div
+            class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-transform duration-300 scale-95">
             <h2 class="text-2xl font-bold text-gray-800 mb-2">🎉 Chúc Mừng! 🎉</h2>
             <p class="text-lg text-gray-600 mb-4">Bạn đã trúng thưởng:</p>
             <div class="bg-yellow-100 border-2 border-dashed border-yellow-400 rounded-lg p-4 mb-6">
                 <p id="prizeText" class="text-2xl font-bold text-yellow-600"></p>
             </div>
-            <button id="closeModalButton" class="w-full bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-105">
+            <button id="closeModalButton"
+                class="w-full bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-105">
                 Tuyệt vời!
             </button>
         </div>
@@ -168,6 +175,14 @@
                 prizeText.textContent = winningPrize.text;
                 prizeModal.classList.remove('opacity-0', 'pointer-events-none');
                 prizeModal.querySelector('div > div').classList.remove('scale-95');
+
+                // 🎉 Hiệu ứng pháo hoa
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+
                 spinning = false;
                 spinButton.disabled = false;
                 spinButton.textContent = 'QUAY';
