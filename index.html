@@ -137,7 +137,6 @@
                     ctx.save();
                     ctx.translate(radius, radius);
                     ctx.rotate(segment.startAngle + (segment.endAngle - segment.startAngle) / 2);
-
                     ctx.textAlign = 'right';
                     ctx.fillStyle = segment.textColor;
                     ctx.font = 'bold 12px "Be Vietnam Pro"';
@@ -145,7 +144,6 @@
                     ctx.restore();
                 });
 
-                // Vẽ viền ngoài và trong
                 ctx.beginPath();
                 ctx.arc(radius, radius, radius - 2, 0, 2 * Math.PI);
                 ctx.strokeStyle = '#e09e1d';
@@ -160,19 +158,18 @@
             }
 
             function getPrizeByAngle(angle) {
-                const normalizedAngle = (angle % 360 + 360) % 360; // Đưa về khoảng 0-360
-                const angleRad = normalizedAngle * Math.PI / 180;
+                const normalized = ((angle % 360) + 360) % 360;
+                const angleInRad = (normalized * Math.PI / 180) % (2 * Math.PI);
+                const pointerAngle = (3 * Math.PI / 2);
 
-                // Kim chỉ ở đỉnh (270 độ hoặc -90 độ), nên ta cần điều chỉnh
-                const pointerAngle = (2 * Math.PI) - angleRad + (Math.PI / 2);
-                const finalAngle = pointerAngle % (2 * Math.PI);
+                const pointerRelativeAngle = (2 * Math.PI + pointerAngle - angleInRad) % (2 * Math.PI);
 
                 for (const segment of segments) {
-                    if (finalAngle >= segment.startAngle && finalAngle < segment.endAngle) {
+                    if (pointerRelativeAngle >= segment.startAngle && pointerRelativeAngle < segment.endAngle) {
                         return segment;
                     }
                 }
-                return segments[0]; // Fallback
+                return segments[0];
             }
 
             function spin() {
@@ -181,18 +178,42 @@
                 spinButton.disabled = true;
                 spinButton.textContent = 'Đang quay...';
 
-                const spinDegrees = Math.random() * 2000 + 2000; // Quay nhiều vòng
+                const spinDegrees = Math.random() * 2000 + 2000;
                 const finalRotation = currentRotation + spinDegrees;
 
                 canvas.style.transform = `rotate(${finalRotation}deg)`;
                 currentRotation = finalRotation;
             }
 
+            function hasWonBefore(prizeText) {
+                const history = JSON.parse(sessionStorage.getItem('spinnedPrizes') || '[]');
+                return history.includes(prizeText);
+            }
+
+            function addToHistory(prizeText) {
+                const history = JSON.parse(sessionStorage.getItem('spinnedPrizes') || '[]');
+                history.push(prizeText);
+                sessionStorage.setItem('spinnedPrizes', JSON.stringify(history));
+            }
+
             canvas.addEventListener('transitionend', () => {
                 const actualRotation = currentRotation % 360;
                 const winningPrize = getPrizeByAngle(actualRotation);
 
+                // Kiểm tra nếu phần thưởng đã quay rồi
+                if (hasWonBefore(winningPrize.text)) {
+                    setTimeout(() => {
+                        spinning = false;
+                        spinButton.disabled = false;
+                        spinButton.textContent = 'QUAY';
+                        spin(); // quay lại
+                    }, 500);
+                    return;
+                }
+
                 prizeText.textContent = winningPrize.text;
+                addToHistory(winningPrize.text);
+
                 prizeModal.classList.remove('opacity-0', 'pointer-events-none');
                 prizeModal.querySelector('div > div').classList.remove('scale-95');
 
@@ -217,6 +238,7 @@
             spinButton.addEventListener('click', spin);
             window.addEventListener('resize', init);
             init();
+            sessionStorage.clear();
         });
     </script>
 </body>
