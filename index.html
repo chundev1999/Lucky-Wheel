@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vòng Quay May Mắn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap');
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .shadow-text {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .wheel-canvas {
+            transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            display: block;
+        }
+
+        .pointer {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-orange-100 to-amber-200">
+
+    <div id="app" class="min-h-screen flex flex-col justify-center items-center p-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-amber-800 mb-4 shadow-text">
+            Vòng Quay May Mắn
+        </h1>
+        <p class="text-amber-700 text-center mb-8">Thử vận may của bạn ngay hôm nay!</p>
+
+        <!-- Vùng chứa vòng quay và kim chỉ -->
+        <div class="relative w-80 h-80 md:w-96 md:h-96 flex justify-center items-center">
+            <!-- Kim chỉ giải thưởng -->
+            <div class="absolute -top-4 w-16 h-16 z-10 pointer" style="left: 50%; transform: translateX(-50%);">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M32 0C36.4183 0 40 3.58172 40 8V24C40 28.4183 36.4183 32 32 32C27.5817 32 24 28.4183 24 24V8C24 3.58172 27.5817 0 32 0Z"
+                        fill="#E63946" />
+                    <path d="M32 64L16 32H48L32 64Z" fill="#E63946" />
+                    <circle cx="32" cy="32" r="8" fill="white" />
+                    <circle cx="32" cy="32" r="4" fill="#E63946" />
+                </svg>
+            </div>
+
+            <!-- Vòng quay Canvas -->
+            <div class="w-full h-full rounded-full shadow-2xl">
+                <canvas id="wheelCanvas" class="wheel-canvas w-full h-full"></canvas>
+            </div>
+        </div>
+
+        <!-- Nút Quay -->
+        <button id="spinButton" class="mt-10 py-4 px-12 text-2xl font-bold text-white rounded-full shadow-xl transform transition-all duration-300
+                    bg-gradient-to-r from-red-500 to-orange-500
+                    hover:scale-105 hover:shadow-2xl
+                    focus:outline-none focus:ring-4 focus:ring-orange-300
+                    disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100">
+            QUAY
+        </button>
+    </div>
+
+    <!-- Modal Chúc Mừng -->
+    <div id="prizeModal"
+        class="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div
+            class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-transform duration-300 scale-95">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">🎉 Chúc Mừng! 🎉</h2>
+            <p class="text-lg text-gray-600 mb-4">Bạn đã trúng thưởng:</p>
+            <div class="bg-yellow-100 border-2 border-dashed border-yellow-400 rounded-lg p-4 mb-6">
+                <p id="prizeText" class="text-2xl font-bold text-yellow-600"></p>
+            </div>
+            <button id="closeModalButton"
+                class="w-full bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-105">
+                Tuyệt vời!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('wheelCanvas');
+            const spinButton = document.getElementById('spinButton');
+            const prizeModal = document.getElementById('prizeModal');
+            const prizeText = document.getElementById('prizeText');
+            const closeModalButton = document.getElementById('closeModalButton');
+
+            const ctx = canvas.getContext('2d');
+
+            const prizes = [
+                { text: '250gr Mộc Nhĩ', color: '#fde4cf', textColor: '#a44200', weight: 10 },
+                { text: '1 Lọ Chatamy', color: '#ffffff', textColor: '#6d6875', weight: 10 },
+                { text: '100gr Kim Ngân Hoa', color: '#fde4cf', textColor: '#a44200', weight: 10 },
+                { text: '1 Hộp Trà Linh Chi', color: '#ffffff', textColor: '#6d6875', weight: 10 },
+                { text: 'Linh Chi Essence', color: '#e63946', textColor: '#ffffff', weight: 10 },
+                { text: 'Linh Chi Gold ✨', color: '#ffd700', textColor: '#a44200', weight: 10 },
+                { text: '2 Hộp Cafe Linh Chi', color: '#fde4cf', textColor: '#a44200', weight: 10 },
+                { text: '1 Lọ Omega 3', color: '#ffffff', textColor: '#6d6875', weight: 10 },
+                { text: 'Phiếu Giảm Giá 500k', color: '#e63946', textColor: '#ffffff', weight: 10 },
+                { text: 'Voucher 10%', color: '#fde4cf', textColor: '#a44200', weight: 10 },
+            ];
+
+            const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+            const segments = [];
+            let currentAngle = 0;
+
+            prizes.forEach(prize => {
+                const angle = (prize.weight / totalWeight) * (2 * Math.PI);
+                segments.push({ ...prize, startAngle: currentAngle, endAngle: currentAngle + angle });
+                currentAngle += angle;
+            });
+
+            let currentRotation = 0;
+            let spinning = false;
+
+            function drawWheel() {
+                const size = canvas.width;
+                const radius = size / 2;
+
+                ctx.clearRect(0, 0, size, size);
+
+                segments.forEach(segment => {
+                    ctx.beginPath();
+                    ctx.moveTo(radius, radius);
+                    ctx.arc(radius, radius, radius - 5, segment.startAngle, segment.endAngle);
+                    ctx.closePath();
+
+                    ctx.fillStyle = segment.color;
+                    ctx.fill();
+
+                    ctx.save();
+                    ctx.translate(radius, radius);
+                    ctx.rotate(segment.startAngle + (segment.endAngle - segment.startAngle) / 2);
+
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = segment.textColor;
+                    ctx.font = 'bold 12px "Be Vietnam Pro"';
+                    ctx.fillText(segment.text, radius - 15, 5);
+                    ctx.restore();
+                });
+
+                // Vẽ viền ngoài và trong
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius - 2, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#e09e1d';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius - 10, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#e09e1d';
+                ctx.lineWidth = 10;
+                ctx.stroke();
+            }
+
+            function getPrizeByAngle(angle) {
+                const normalizedAngle = (angle % 360 + 360) % 360; // Đưa về khoảng 0-360
+                const angleRad = normalizedAngle * Math.PI / 180;
+
+                // Kim chỉ ở đỉnh (270 độ hoặc -90 độ), nên ta cần điều chỉnh
+                const pointerAngle = (2 * Math.PI) - angleRad + (Math.PI / 2);
+                const finalAngle = pointerAngle % (2 * Math.PI);
+
+                for (const segment of segments) {
+                    if (finalAngle >= segment.startAngle && finalAngle < segment.endAngle) {
+                        return segment;
+                    }
+                }
+                return segments[0]; // Fallback
+            }
+
+            function spin() {
+                if (spinning) return;
+                spinning = true;
+                spinButton.disabled = true;
+                spinButton.textContent = 'Đang quay...';
+
+                const spinDegrees = Math.random() * 2000 + 2000; // Quay nhiều vòng
+                const finalRotation = currentRotation + spinDegrees;
+
+                canvas.style.transform = `rotate(${finalRotation}deg)`;
+                currentRotation = finalRotation;
+            }
+
+            canvas.addEventListener('transitionend', () => {
+                const actualRotation = currentRotation % 360;
+                const winningPrize = getPrizeByAngle(actualRotation);
+
+                prizeText.textContent = winningPrize.text;
+                prizeModal.classList.remove('opacity-0', 'pointer-events-none');
+                prizeModal.querySelector('div > div').classList.remove('scale-95');
+
+                spinning = false;
+                spinButton.disabled = false;
+                spinButton.textContent = 'QUAY';
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                prizeModal.classList.add('opacity-0', 'pointer-events-none');
+                prizeModal.querySelector('div > div').classList.add('scale-95');
+            });
+
+            // Khởi tạo
+            function init() {
+                const size = canvas.parentElement.clientWidth;
+                canvas.width = size;
+                canvas.height = size;
+                drawWheel();
+            }
+
+            spinButton.addEventListener('click', spin);
+            window.addEventListener('resize', init);
+            init();
+        });
+    </script>
+</body>
+
+</html>
