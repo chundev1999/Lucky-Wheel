@@ -102,12 +102,12 @@
                 { text: 'Voucher 10%', color: '#fee9af', textColor: '#a44200', weight: 10 },
             ];
 
-            const totalWeight = prizes.length;
+            const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
             const segments = [];
             let currentAngle = 0;
 
             prizes.forEach(prize => {
-                const angle = (1 / totalWeight) * (2 * Math.PI);
+                const angle = (prize.weight / totalWeight) * (2 * Math.PI);
                 segments.push({ ...prize, startAngle: currentAngle, endAngle: currentAngle + angle });
                 currentAngle += angle;
             });
