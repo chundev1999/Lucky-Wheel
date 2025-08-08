@@ -102,23 +102,32 @@
                 { text: 'Voucher 10%', color: '#fee9af', textColor: '#a44200', weight: 10 },
             ];
 
-            const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
+            const segmentAngle = (2 * Math.PI) / prizes.length;
+            const segmentDeg = 360 / prizes.length;
             const segments = [];
             let currentAngle = 0;
 
             prizes.forEach(prize => {
-                const angle = (prize.weight / totalWeight) * (2 * Math.PI);
-                segments.push({ ...prize, startAngle: currentAngle, endAngle: currentAngle + angle });
-                currentAngle += angle;
+                segments.push({
+                    ...prize,
+                    startAngle: currentAngle,
+                    endAngle: currentAngle + segmentAngle
+                });
+                currentAngle += segmentAngle;
             });
+
+            canvas.style.transformOrigin = '50% 50%';
+            canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
 
             let currentRotation = 0;
             let spinning = false;
+            let chosenPrizeIndex = null;
 
             function drawWheel() {
                 const size = canvas.width;
                 const radius = size / 2;
                 ctx.clearRect(0, 0, size, size);
+
                 segments.forEach(segment => {
                     ctx.beginPath();
                     ctx.moveTo(radius, radius);
@@ -126,20 +135,23 @@
                     ctx.closePath();
                     ctx.fillStyle = segment.color;
                     ctx.fill();
+
                     ctx.save();
                     ctx.translate(radius, radius);
-                    ctx.rotate(segment.startAngle + (segment.endAngle - segment.startAngle) / 2);
+                    ctx.rotate(segment.startAngle + (segmentAngle / 2));
                     ctx.textAlign = 'right';
                     ctx.fillStyle = segment.textColor;
                     ctx.font = 'bold 12px "Be Vietnam Pro"';
                     ctx.fillText(segment.text, radius * 0.85, 5);
                     ctx.restore();
                 });
+
                 ctx.beginPath();
                 ctx.arc(radius, radius, radius - 2, 0, 2 * Math.PI);
                 ctx.strokeStyle = '#e09e1d';
                 ctx.lineWidth = 5;
                 ctx.stroke();
+
                 ctx.beginPath();
                 ctx.arc(radius, radius, radius - 10, 0, 2 * Math.PI);
                 ctx.strokeStyle = '#e09e1d';
@@ -147,17 +159,14 @@
                 ctx.stroke();
             }
 
-            function getPrizeByAngle(angle) {
-                const normalized = ((angle % 360) + 360) % 360;
-                const angleInRad = (normalized * Math.PI / 180) % (2 * Math.PI);
-                const pointerAngle = (3 * Math.PI / 2);
-                const pointerRelativeAngle = (2 * Math.PI + pointerAngle - angleInRad) % (2 * Math.PI);
-                for (const segment of segments) {
-                    if (pointerRelativeAngle >= segment.startAngle && pointerRelativeAngle < segment.endAngle) {
-                        return segment;
-                    }
+            function choosePrizeByWeight() {
+                const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+                let random = Math.random() * totalWeight;
+                for (let i = 0; i < prizes.length; i++) {
+                    if (random < prizes[i].weight) return i;
+                    random -= prizes[i].weight;
                 }
-                return segments[0];
+                return 0;
             }
 
             function spin() {
@@ -174,20 +183,34 @@
                 spinning = true;
                 spinButton.disabled = true;
                 spinButton.textContent = 'Đang quay...';
-                const spinDegrees = Math.random() * 2000 + 2000;
-                const finalRotation = currentRotation + spinDegrees;
+                chosenPrizeIndex = choosePrizeByWeight();
+                const centerDeg = chosenPrizeIndex * segmentDeg + segmentDeg / 2;
+
+                const pointerDeg = 270;
+                let stopAngleNormalized = ((pointerDeg - centerDeg) % 360 + 360) % 360; // [0..360)
+
+                const currentNorm = ((currentRotation % 360) + 360) % 360;
+                const extraFull = 360 * (4 + Math.floor(Math.random() * 3));
+                const delta = ((stopAngleNormalized - currentNorm + 360) % 360) + extraFull;
+                const finalRotation = currentRotation + delta;
+                canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
                 canvas.style.transform = `rotate(${finalRotation}deg)`;
                 currentRotation = finalRotation;
             }
 
-            canvas.addEventListener('transitionend', () => {
-                const actualRotation = currentRotation % 360;
-                const winningPrize = getPrizeByAngle(actualRotation);
+            canvas.addEventListener('transitionend', (e) => {
+                if (e.propertyName && e.propertyName !== 'transform') return;
+                currentRotation = ((currentRotation % 360) + 360) % 360;
+                canvas.style.transition = 'none';
+                canvas.style.transform = `rotate(${currentRotation}deg)`;
+                canvas.offsetHeight;
+                canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                const winningPrize = prizes[chosenPrizeIndex];
                 prizeText.textContent = winningPrize.text;
+
                 prizeModal.classList.remove('opacity-0', 'pointer-events-none');
                 prizeModal.querySelector('div > div').classList.remove('scale-95');
 
-                // 🎉 Hiệu ứng pháo hoa
                 confetti({
                     particleCount: 150,
                     spread: 70,
@@ -209,10 +232,14 @@
                 canvas.width = size;
                 canvas.height = size;
                 drawWheel();
+                currentRotation = 0;
+                canvas.style.transform = 'rotate(0deg)';
             }
 
             spinButton.addEventListener('click', spin);
-            window.addEventListener('resize', init);
+            window.addEventListener('resize', () => {
+                init();
+            });
             init();
         });
     </script>
